@@ -7,7 +7,7 @@ modify/rewrite springboot-cache to support 2 level cache
 
 ## Cache 
 - Cache Container Structure
-    - ConcurrentMap<String name,ConcurrentMap<String key,Cache cache> cacheMap>
+    - ConcurrentMap<String name,ConcurrentMap<String cacheKey,Cache cache> cacheMap>
    
 - Cache 
 
