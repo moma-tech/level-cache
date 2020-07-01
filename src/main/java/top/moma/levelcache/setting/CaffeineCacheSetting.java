@@ -10,7 +10,9 @@ import java.util.concurrent.TimeUnit;
  * @author Created by ivan on 2020/6/29 .
  * @version 1.0
  */
-public class CaffeineCacheSetting {
+public class CaffeineCacheSetting implements java.io.Serializable {
+  private static final long serialVersionUID = 265643425858885778L;
+
   public enum CaffeineExpiredMode {
     /** 最后一次写入或访问后经过固定时间过期 */
     expireAfterAccess,
