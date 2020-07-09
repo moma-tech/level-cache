@@ -11,6 +11,14 @@ import java.util.concurrent.TimeUnit;
 public class RedisCacheSetting implements java.io.Serializable {
   private static final long serialVersionUID = -3923012495086794506L;
 
+  public enum RedisExpireMode {
+    /** 最后一次写入或访问后经过固定时间过期 */
+    expireAfterAccess,
+    /** 最后一次写入后经过固定时间过期 */
+    expireAfterWrite,
+    ;
+  }
+
   /** 缓存过期时间 */
   private long expiration = 0;
   /** 过期时间单位 */
@@ -23,6 +31,8 @@ public class RedisCacheSetting implements java.io.Serializable {
   private boolean autoRenew = false;
   /** 自动刷新阈值 */
   private long renewThreshold = 0;
+  /** 缓存过期模式 */
+  private RedisExpireMode redisExpireMode = RedisExpireMode.expireAfterWrite;
 
   public long getExpiration() {
     return expiration;
@@ -70,5 +80,13 @@ public class RedisCacheSetting implements java.io.Serializable {
 
   public void setRenewThreshold(long renewThreshold) {
     this.renewThreshold = renewThreshold;
+  }
+
+  public RedisExpireMode getRedisExpireMode() {
+    return redisExpireMode;
+  }
+
+  public void setRedisExpireMode(RedisExpireMode redisExpireMode) {
+    this.redisExpireMode = redisExpireMode;
   }
 }

@@ -1,9 +1,16 @@
 package top.moma.levelcache.cache.redis;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cache.support.AbstractValueAdaptingCache;
+import org.springframework.cache.support.NullValue;
 import org.springframework.data.redis.core.RedisTemplate;
 import top.moma.levelcache.setting.RedisCacheSetting;
+import top.moma.levelcache.support.CacheConstants;
+import top.moma.levelcache.support.JacksonHelper;
 
+import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
@@ -14,7 +21,9 @@ import java.util.concurrent.TimeUnit;
  * @version 1.0
  */
 public class RedisCache extends AbstractValueAdaptingCache {
+  protected static final Logger logger = LoggerFactory.getLogger(RedisCache.class);
 
+  /** Cache name */
   private final String name;
 
   /** 缓存过期时间 */
@@ -29,6 +38,8 @@ public class RedisCache extends AbstractValueAdaptingCache {
   private boolean autoRenew;
   /** 自动刷新阈值 */
   private long renewThreshold;
+  /** 缓存过期模式 */
+  private RedisCacheSetting.RedisExpireMode redisExpireMode;
 
   private RedisTemplate<String, Object> redisTemplate;
 
@@ -46,6 +57,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
         setting.isHardRefresh(),
         setting.isAutoRenew(),
         setting.getRenewThreshold(),
+        setting.getRedisExpireMode(),
         redisTemplate);
   }
 
@@ -58,6 +70,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
       boolean hardRefresh,
       boolean autoRenew,
       long renewThreshold,
+      RedisCacheSetting.RedisExpireMode redisExpireMode,
       RedisTemplate<String, Object> redisTemplate) {
     super(allowNullValues);
     this.name = name;
@@ -67,17 +80,20 @@ public class RedisCache extends AbstractValueAdaptingCache {
     this.hardRefresh = hardRefresh;
     this.autoRenew = autoRenew;
     this.renewThreshold = renewThreshold;
+    this.redisExpireMode = redisExpireMode;
     this.redisTemplate = redisTemplate;
   }
 
   @Override
   protected Object lookup(Object key) {
-    return null;
+    RedisKey redisKey = getRedisKey(key);
+    logger.debug("redis缓存 key={} get缓存", JacksonHelper.toJson(redisKey.getRedisKey()));
+    return redisTemplate.opsForValue().get(redisKey.getRedisKey());
   }
 
   @Override
   public String getName() {
-    return null;
+    return this.name;
   }
 
   @Override
@@ -87,15 +103,84 @@ public class RedisCache extends AbstractValueAdaptingCache {
 
   @Override
   public <T> T get(Object key, Callable<T> valueLoader) {
+    RedisKey redisKey = getRedisKey(key);
+    logger.debug("redis缓存 key={} get缓存, 不存在，执行后续", JacksonHelper.toJson(redisKey.getRedisKey()));
+    Object result = redisTemplate.opsForValue().get(redisKey.getRedisKey());
+    if (Objects.nonNull(result) || redisTemplate.hasKey(redisKey.getRedisKey())) {
+      if (RedisCacheSetting.RedisExpireMode.expireAfterAccess.equals(this.redisExpireMode)) {
+        softRefresh(redisKey);
+      }
+      return (T) fromStoreValue(result);
+    }
     return null;
   }
 
   @Override
-  public void put(Object key, Object value) {}
+  public void put(Object key, Object value) {
+    RedisKey redisKey = getRedisKey(key);
+  }
 
   @Override
   public void evict(Object key) {}
 
   @Override
   public void clear() {}
+
+  private Object putValue(RedisKey redisKey, Object value) {
+    Object result = toStoreValue(value);
+    if (null != value && !(value instanceof NullValue)) {
+      logger.debug(
+          "redis缓存 key={} put缓存，缓存值：{}",
+          JacksonHelper.toJson(redisKey.getRedisKey()),
+          JacksonHelper.toJson(value));
+      this.redisTemplate.opsForValue().set(redisKey.getRedisKey(), result, expiration, timeUnit);
+      return result;
+    } else if (isAllowNullValues()) {
+      logger.debug(
+          "redis缓存 key={} put缓存，缓存值为null，超时时间减半",
+          JacksonHelper.toJson(redisKey.getRedisKey()),
+          JacksonHelper.toJson(value));
+      this.redisTemplate
+          .opsForValue()
+          .set(redisKey.getRedisKey(), result, expiration / 2, timeUnit);
+      return result;
+    } else {
+      this.redisTemplate.opsForValue().getOperations().delete(redisKey.getRedisKey());
+      logger.error("Redis 缓存不允许存NULL值，不缓存数据");
+      return result;
+    }
+  }
+
+  private RedisKey getRedisKey(Object key) {
+    return new RedisKey(key, redisTemplate.getKeySerializer()).prefix(usePrefix, name);
+  }
+
+  private <T> void refreshCache(Object key, Callable<T> valueLoader) {
+    RedisKey redisKey = this.getRedisKey(key);
+    Long ttl = redisTemplate.getExpire(redisKey.getRedisKey());
+    if (null != ttl && 0 < ttl && TimeUnit.SECONDS.toMillis(ttl) <= renewThreshold) {
+      if (hardRefresh) {
+        logger.debug("redis刷新缓存 hard key={}", JacksonHelper.toJson(redisKey.getRedisKey()));
+      } else {
+        logger.debug("redis刷新缓存 soft key={}", JacksonHelper.toJson(redisKey.getRedisKey()));
+        softRefresh(redisKey);
+      }
+    }
+  }
+
+  private <T> void softRefresh(RedisKey redisKey) {
+    RedisSimpaleLock redisSimpaleLock = new RedisSimpaleLock(redisTemplate);
+    String lockValue = UUID.randomUUID().toString();
+    try {
+      if (redisSimpaleLock.lock(CacheConstants.LOCK_PREFIX + redisKey.getRedisKey(), lockValue)) {
+        redisTemplate.expire(redisKey.getRedisKey(), this.expiration, TimeUnit.MILLISECONDS);
+      }
+    } catch (Exception e) {
+      logger.error(e.getMessage(), e);
+    } finally {
+      redisSimpaleLock.unlock(CacheConstants.LOCK_PREFIX + redisKey.getRedisKey(), lockValue);
+    }
+  }
+
+  private <T> void hardRefresh(RedisKey redisKey, Callable<T> valueLoader) {}
 }
