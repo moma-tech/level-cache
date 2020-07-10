@@ -13,7 +13,7 @@ public class RedisCacheSetting implements java.io.Serializable {
 
   public enum RedisExpireMode {
     /** 最后一次写入或访问后经过固定时间过期 */
-    expireAfterAccess,
+    refreshAfterAccess,
     /** 最后一次写入后经过固定时间过期 */
     expireAfterWrite,
     ;

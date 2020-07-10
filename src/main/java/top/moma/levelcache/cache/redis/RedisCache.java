@@ -106,22 +106,33 @@ public class RedisCache extends AbstractValueAdaptingCache {
     RedisKey redisKey = getRedisKey(key);
     logger.debug("redis缓存 key={} get缓存, 不存在，执行后续", JacksonHelper.toJson(redisKey.getRedisKey()));
     Object result = redisTemplate.opsForValue().get(redisKey.getRedisKey());
+    // KEY 存在
     if (Objects.nonNull(result) || redisTemplate.hasKey(redisKey.getRedisKey())) {
-      if (RedisCacheSetting.RedisExpireMode.expireAfterAccess.equals(this.redisExpireMode)) {
+      if (RedisCacheSetting.RedisExpireMode.refreshAfterAccess.equals(this.redisExpireMode)) {
         softRefresh(redisKey);
       }
       return (T) fromStoreValue(result);
     }
+    // 　方法获取
     return null;
   }
 
   @Override
   public void put(Object key, Object value) {
     RedisKey redisKey = getRedisKey(key);
+    logger.debug(
+        "redis缓存 key={} put缓存，缓存值：{}",
+        JacksonHelper.toJson(redisKey.getRedisKey()),
+        JacksonHelper.toJson(value));
+    this.putValue(redisKey, value);
   }
 
   @Override
-  public void evict(Object key) {}
+  public void evict(Object key) {
+    RedisKey redisKey = getRedisKey(key);
+    logger.debug("redis清除缓存 key={}", JacksonHelper.toJson(redisKey.getRedisKey()));
+    redisTemplate.delete(redisKey.getRedisKey());
+  }
 
   @Override
   public void clear() {}
@@ -129,10 +140,6 @@ public class RedisCache extends AbstractValueAdaptingCache {
   private Object putValue(RedisKey redisKey, Object value) {
     Object result = toStoreValue(value);
     if (null != value && !(value instanceof NullValue)) {
-      logger.debug(
-          "redis缓存 key={} put缓存，缓存值：{}",
-          JacksonHelper.toJson(redisKey.getRedisKey()),
-          JacksonHelper.toJson(value));
       this.redisTemplate.opsForValue().set(redisKey.getRedisKey(), result, expiration, timeUnit);
       return result;
     } else if (isAllowNullValues()) {
@@ -153,6 +160,10 @@ public class RedisCache extends AbstractValueAdaptingCache {
 
   private RedisKey getRedisKey(Object key) {
     return new RedisKey(key, redisTemplate.getKeySerializer()).prefix(usePrefix, name);
+  }
+
+  private <T> T callValueMethod(RedisKey redisKey, Callable<T> valueLoader) {
+    return null;
   }
 
   private <T> void refreshCache(Object key, Callable<T> valueLoader) {
