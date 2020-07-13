@@ -8,4 +8,6 @@ package top.moma.levelcache.support;
  */
 public interface CacheConstants {
   String LOCK_PREFIX = "LOCK-";
+  int RETRY_MAX = 5;
+  long WAIT_TIME = 20;
 }

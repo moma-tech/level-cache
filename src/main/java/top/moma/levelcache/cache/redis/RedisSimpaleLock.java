@@ -46,7 +46,7 @@ public class RedisSimpaleLock {
       }
 
     } catch (Exception e) {
-      logger.error("redis lock获取异常 key={} ", e);
+      logger.error("redis lock获取异常 key={}", e.fillInStackTrace());
     }
     logger.debug("redis lock获取失败 key={} ", JacksonHelper.toJson(key));
     return false;
