@@ -31,6 +31,8 @@ public class RedisCacheSetting implements java.io.Serializable {
   private boolean autoRenew = false;
   /** 自动刷新阈值 */
   private long renewThreshold = 0;
+  /** 空值过期时间 */
+  private long nullExperation = 5000;
   /** 缓存过期模式 */
   private RedisExpireMode redisExpireMode = RedisExpireMode.expireAfterWrite;
 
@@ -80,6 +82,14 @@ public class RedisCacheSetting implements java.io.Serializable {
 
   public void setRenewThreshold(long renewThreshold) {
     this.renewThreshold = renewThreshold;
+  }
+
+  public long getNullExperation() {
+    return nullExperation;
+  }
+
+  public void setNullExperation(long nullExperation) {
+    this.nullExperation = nullExperation;
   }
 
   public RedisExpireMode getRedisExpireMode() {

@@ -23,7 +23,6 @@ public class LocalThreadPool {
    * await
    *
    * @author Created by ivan at 下午3:06 2020/7/13.
-   * @return void
    */
   public final void await(String key, long milliseconds) throws InterruptedException {
     if (Thread.interrupted()) {
@@ -42,7 +41,6 @@ public class LocalThreadPool {
    * signalAll
    *
    * @author Created by ivan at 下午3:06 2020/7/13.
-   * @return void
    */
   public final void signalAll(String key) {
     Set<Thread> threadSet = threadConMap.get(key);

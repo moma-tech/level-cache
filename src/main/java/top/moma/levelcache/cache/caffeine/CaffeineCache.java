@@ -124,7 +124,7 @@ public class CaffeineCache extends AbstractValueAdaptingCache {
   private static Cache<Object, Object> builtCache(CaffeineCacheSetting caffeineCacheSetting) {
     Caffeine<Object, Object> cacheBuilder = Caffeine.newBuilder();
     cacheBuilder
-        .initialCapacity(caffeineCacheSetting.getInitalCapacity())
+        .initialCapacity(caffeineCacheSetting.getInitialCapacity())
         .maximumSize(caffeineCacheSetting.getMaximumSize())
         .maximumWeight(caffeineCacheSetting.getMaximumWeight());
     if (CaffeineCacheSetting.CaffeineExpiredMode.expireAfterWrite.equals(

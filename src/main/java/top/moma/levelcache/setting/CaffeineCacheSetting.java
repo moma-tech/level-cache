@@ -22,7 +22,7 @@ public class CaffeineCacheSetting implements java.io.Serializable {
   }
 
   /** 初始空间大小 */
-  private int initalCapacity = 20;
+  private int initialCapacity = 20;
 
   /** 缓存最大条数 */
   private long maximumSize = 1000L;
@@ -39,12 +39,12 @@ public class CaffeineCacheSetting implements java.io.Serializable {
   /** 缓存过期模式 */
   private CaffeineExpiredMode caffeineExpiredMode = CaffeineExpiredMode.expireAfterWrite;
 
-  public int getInitalCapacity() {
-    return initalCapacity;
+  public int getInitialCapacity() {
+    return initialCapacity;
   }
 
-  public void setInitalCapacity(int initalCapacity) {
-    this.initalCapacity = initalCapacity;
+  public void setInitialCapacity(int initialCapacity) {
+    this.initialCapacity = initialCapacity;
   }
 
   public long getMaximumSize() {

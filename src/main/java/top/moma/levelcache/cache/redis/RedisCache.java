@@ -4,14 +4,21 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.support.AbstractValueAdaptingCache;
 import org.springframework.cache.support.NullValue;
+import org.springframework.data.redis.connection.RedisClusterConnection;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
+import org.springframework.util.CollectionUtils;
 import top.moma.levelcache.setting.RedisCacheSetting;
 import top.moma.levelcache.support.CacheConstants;
 import top.moma.levelcache.support.JacksonHelper;
 import top.moma.levelcache.support.LocalThreadPool;
 import top.moma.levelcache.support.ThreadTaskUtils;
 
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
@@ -40,6 +47,8 @@ public class RedisCache extends AbstractValueAdaptingCache {
   private boolean autoRenew;
   /** 自动刷新阈值 */
   private long renewThreshold;
+  /** 空值过期时间 */
+  private long nullExpiration;
   /** 缓存过期模式 */
   private RedisCacheSetting.RedisExpireMode redisExpireMode;
 
@@ -47,7 +56,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
 
   private RedisTemplate<String, Object> redisTemplate;
 
-  protected RedisCache(
+  public RedisCache(
       String name,
       boolean allowNullValues,
       RedisCacheSetting setting,
@@ -61,6 +70,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
         setting.isHardRefresh(),
         setting.isAutoRenew(),
         setting.getRenewThreshold(),
+        setting.getNullExperation(),
         setting.getRedisExpireMode(),
         redisTemplate);
   }
@@ -74,6 +84,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
       boolean hardRefresh,
       boolean autoRenew,
       long renewThreshold,
+      long nullExpiration,
       RedisCacheSetting.RedisExpireMode redisExpireMode,
       RedisTemplate<String, Object> redisTemplate) {
     super(allowNullValues);
@@ -84,6 +95,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
     this.hardRefresh = hardRefresh;
     this.autoRenew = autoRenew;
     this.renewThreshold = renewThreshold;
+    this.nullExpiration = nullExpiration;
     this.redisExpireMode = redisExpireMode;
     this.redisTemplate = redisTemplate;
   }
@@ -110,7 +122,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
     RedisKey redisKey = getRedisKey(key);
     logger.debug("redis缓存 key={} get缓存", JacksonHelper.toJson(redisKey.getRedisKey()));
     Object result = redisTemplate.opsForValue().get(redisKey.getRedisKey());
-    // KEY 存在
+    // KEY 存在, 未正确序列化可能存在空值
     if (Objects.nonNull(result) || redisTemplate.hasKey(redisKey.getRedisKey())) {
       // auto renew enabled or redis expired mode set to after access
       if (autoRenew
@@ -141,7 +153,41 @@ public class RedisCache extends AbstractValueAdaptingCache {
   }
 
   @Override
-  public void clear() {}
+  public void clear() {
+    if (usePrefix) {
+      logger.info("清空redis缓存 ，缓存前缀为{}", getName());
+      String pattern = getName() + "*";
+      Set<String> keys =
+          redisTemplate.execute(
+              (RedisCallback<Set<String>>)
+                  connection -> {
+                    if (connection instanceof RedisClusterConnection) {
+                      // 集群模式
+                      return redisTemplate.keys(pattern);
+                    }
+                    // 单机模式
+                    Set<String> keysTmp = new HashSet<>();
+                    try (Cursor<byte[]> cursor =
+                        connection.scan(
+                            new ScanOptions.ScanOptionsBuilder()
+                                .match(pattern)
+                                .count(10000)
+                                .build())) {
+
+                      while (cursor.hasNext()) {
+                        keysTmp.add(new String(cursor.next(), "Utf-8"));
+                      }
+                    } catch (Exception e) {
+                      throw new RuntimeException(e);
+                    }
+                    return keysTmp;
+                  });
+      ;
+      if (!CollectionUtils.isEmpty(keys)) {
+        redisTemplate.delete(keys);
+      }
+    }
+  }
 
   /**
    * putValue
@@ -158,12 +204,12 @@ public class RedisCache extends AbstractValueAdaptingCache {
       return result;
     } else if (isAllowNullValues()) {
       logger.debug(
-          "redis缓存 key={} put缓存，缓存值为value={}，超时时间减半",
+          "redis缓存 key={} put缓存，缓存值为value={}，独立超时时间，防穿透",
           JacksonHelper.toJson(redisKey.getRedisKey()),
           JacksonHelper.toJson(value));
       this.redisTemplate
           .opsForValue()
-          .set(redisKey.getRedisKey(), result, expiration / 2, timeUnit);
+          .set(redisKey.getRedisKey(), result, nullExpiration, timeUnit);
       return result;
     } else {
       this.redisTemplate.opsForValue().getOperations().delete(redisKey.getRedisKey());
@@ -188,6 +234,8 @@ public class RedisCache extends AbstractValueAdaptingCache {
    * lockGetValueMethod
    *
    * <p>get K/V, to avoid multi get, use local thread pool to wait, do retry, and lock;
+   *
+   * <p>use local thread to avoid　breakdown
    *
    * @author Created by ivan at 下午2:46 2020/7/13.
    * @return T
