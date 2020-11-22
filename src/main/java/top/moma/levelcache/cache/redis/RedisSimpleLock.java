@@ -17,14 +17,14 @@ import java.util.concurrent.TimeUnit;
  * @author Created by ivan on 2020/7/9 .
  * @version 1.0
  */
-public class RedisSimpaleLock {
-  protected static final Logger logger = LoggerFactory.getLogger(RedisSimpaleLock.class);
+public class RedisSimpleLock {
+  protected static final Logger logger = LoggerFactory.getLogger(RedisSimpleLock.class);
 
   private final long LOCK_MAX_TIME = 2000;
-  private final int RETERY_MAX_TIME = 4;
+  private final int RETRY_MAX_TIME = 4;
   private RedisTemplate redisTemplate;
 
-  public RedisSimpaleLock(RedisTemplate redisTemplate) {
+  public RedisSimpleLock(RedisTemplate redisTemplate) {
     this.redisTemplate = redisTemplate;
   }
 
@@ -32,7 +32,7 @@ public class RedisSimpaleLock {
     try {
 
       int counter = 1;
-      while (RETERY_MAX_TIME > counter) {
+      while (RETRY_MAX_TIME > counter) {
         Boolean locked =
             redisTemplate
                 .opsForValue()

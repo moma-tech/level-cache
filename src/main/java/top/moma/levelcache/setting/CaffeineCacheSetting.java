@@ -31,7 +31,7 @@ public class CaffeineCacheSetting implements java.io.Serializable {
   private long maximumWeight = -1L;
 
   /** 缓存过期时间 */
-  private int expireTime = 0;
+  private long expireTime = 0;
 
   /** 过期时间单位 */
   private TimeUnit timeUnit = TimeUnit.MILLISECONDS;
@@ -63,11 +63,11 @@ public class CaffeineCacheSetting implements java.io.Serializable {
     this.maximumWeight = maximumWeight;
   }
 
-  public int getExpireTime() {
+  public long getExpireTime() {
     return expireTime;
   }
 
-  public void setExpireTime(int expireTime) {
+  public void setExpireTime(long expireTime) {
     this.expireTime = expireTime;
   }
 

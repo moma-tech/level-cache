@@ -64,13 +64,13 @@ public class RedisCache extends AbstractValueAdaptingCache {
     this(
         allowNullValues,
         name,
-        setting.getExpiration(),
+        setting.getExpireTime(),
         setting.getTimeUnit(),
         setting.isUsePrefix(),
         setting.isHardRefresh(),
         setting.isAutoRenew(),
         setting.getRenewThreshold(),
-        setting.getNullExperation(),
+        setting.getNullExpiration(),
         setting.getRedisExpireMode(),
         redisTemplate);
   }
@@ -241,7 +241,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
    * @return T
    */
   private <T> T lockGetValueMethod(RedisKey redisKey, Callable<T> valueLoader) {
-    RedisSimpaleLock redisSimpaleLock = new RedisSimpaleLock(redisTemplate);
+    RedisSimpleLock redisSimpleLock = new RedisSimpleLock(redisTemplate);
     String lockValue = UUID.randomUUID().toString();
     for (int i = 0; i < CacheConstants.RETRY_MAX; i++) {
       Object result = redisTemplate.opsForValue().get(redisKey.getRedisKey());
@@ -250,7 +250,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
         return (T) fromStoreValue(result);
       }
       try {
-        if (redisSimpaleLock.lock(redisKey.getRedisKey(), lockValue)) {
+        if (redisSimpleLock.lock(redisKey.getRedisKey(), lockValue)) {
           logger.debug(
               "redis 缓存, key={},加锁成功，执行方法获取", JacksonHelper.toJson(redisKey.getRedisKey()));
           T value = callValueMethod(redisKey, valueLoader);
@@ -261,7 +261,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
       } catch (Exception e) {
         throw new ValueRetrievalException(redisKey.getRedisKey(), valueLoader, e);
       } finally {
-        redisSimpaleLock.unlock(redisKey.getRedisKey(), lockValue);
+        redisSimpleLock.unlock(redisKey.getRedisKey(), lockValue);
       }
     }
     logger.debug(
@@ -320,16 +320,16 @@ public class RedisCache extends AbstractValueAdaptingCache {
    * @author Created by ivan at 下午2:53 2020/7/13.
    */
   private <T> void softRefresh(RedisKey redisKey) {
-    RedisSimpaleLock redisSimpaleLock = new RedisSimpaleLock(redisTemplate);
+    RedisSimpleLock redisSimpleLock = new RedisSimpleLock(redisTemplate);
     String lockValue = UUID.randomUUID().toString();
     try {
-      if (redisSimpaleLock.lock(CacheConstants.LOCK_PREFIX + redisKey.getRedisKey(), lockValue)) {
+      if (redisSimpleLock.lock(CacheConstants.LOCK_PREFIX + redisKey.getRedisKey(), lockValue)) {
         redisTemplate.expire(redisKey.getRedisKey(), this.expiration, TimeUnit.MILLISECONDS);
       }
     } catch (Exception e) {
       logger.error(e.getMessage(), e);
     } finally {
-      redisSimpaleLock.unlock(CacheConstants.LOCK_PREFIX + redisKey.getRedisKey(), lockValue);
+      redisSimpleLock.unlock(CacheConstants.LOCK_PREFIX + redisKey.getRedisKey(), lockValue);
     }
   }
 
@@ -343,9 +343,9 @@ public class RedisCache extends AbstractValueAdaptingCache {
   private <T> void hardRefresh(RedisKey redisKey, Callable<T> valueLoader) {
     ThreadTaskUtils.run(
         () -> {
-          RedisSimpaleLock redisSimpaleLock = new RedisSimpaleLock(redisTemplate);
+          RedisSimpleLock redisSimpleLock = new RedisSimpleLock(redisTemplate);
           String lockValue = UUID.randomUUID().toString();
-          if (redisSimpaleLock.lock(redisKey.getRedisKey(), lockValue)) {
+          if (redisSimpleLock.lock(redisKey.getRedisKey(), lockValue)) {
             callValueMethod(redisKey, valueLoader);
           }
         });

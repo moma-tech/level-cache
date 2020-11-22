@@ -20,7 +20,7 @@ public class RedisCacheSetting implements java.io.Serializable {
   }
 
   /** 缓存过期时间 */
-  private long expiration = 0;
+  private long expireTime = 0;
   /** 过期时间单位 */
   private TimeUnit timeUnit = TimeUnit.MICROSECONDS;
   /** 使用缓存名前缀 */
@@ -32,16 +32,16 @@ public class RedisCacheSetting implements java.io.Serializable {
   /** 自动刷新阈值 */
   private long renewThreshold = 0;
   /** 空值过期时间 */
-  private long nullExperation = 5000;
+  private long nullExpiration = 5000;
   /** 缓存过期模式 */
   private RedisExpireMode redisExpireMode = RedisExpireMode.expireAfterWrite;
 
-  public long getExpiration() {
-    return expiration;
+  public long getExpireTime() {
+    return expireTime;
   }
 
-  public void setExpiration(long expiration) {
-    this.expiration = expiration;
+  public void setExpireTime(long expireTime) {
+    this.expireTime = expireTime;
   }
 
   public TimeUnit getTimeUnit() {
@@ -84,12 +84,12 @@ public class RedisCacheSetting implements java.io.Serializable {
     this.renewThreshold = renewThreshold;
   }
 
-  public long getNullExperation() {
-    return nullExperation;
+  public long getNullExpiration() {
+    return nullExpiration;
   }
 
-  public void setNullExperation(long nullExperation) {
-    this.nullExperation = nullExperation;
+  public void setNullExpiration(long nullExpiration) {
+    this.nullExpiration = nullExpiration;
   }
 
   public RedisExpireMode getRedisExpireMode() {

@@ -15,7 +15,7 @@ import java.util.Arrays;
  * @version 1.0
  */
 public class RedisKey {
-  private final String DEFAULT_PREFIX = "tfw-redis";
+  private final String DEFAULT_PREFIX = "moma-redis";
   private String prefix;
   private boolean usePrefix = false;
 
