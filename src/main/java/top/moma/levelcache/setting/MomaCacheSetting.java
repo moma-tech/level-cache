@@ -38,6 +38,8 @@ public class MomaCacheSetting {
           .append("-redis-")
           .append(redisCacheSetting.getTimeUnit().toMillis(redisCacheSetting.getExpireTime()));
     }
+    stringBuilder.append("-cache");
+    cacheId = stringBuilder.toString();
   }
 
   public String getCacheId() {
