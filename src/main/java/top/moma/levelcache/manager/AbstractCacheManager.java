@@ -5,7 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.cache.Cache;
 import top.moma.levelcache.setting.MomaCacheSetting;
 
-import java.util.Collection;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -17,18 +17,22 @@ import java.util.concurrent.ConcurrentMap;
  * @author Ivan
  * @version 1.0 Created by Ivan at 2020/11/21.
  */
-public class AbstractCacheManager implements CacheManager {
+public abstract class AbstractCacheManager implements CacheManager {
   private Logger logger = LoggerFactory.getLogger(AbstractCacheManager.class);
 
   /** Cache Containers Two Levels */
   private final ConcurrentMap<String, ConcurrentMap<String, Cache>> cacheContainer =
       new ConcurrentHashMap<>(16);
 
+  private volatile Set<String> cacheNames = new HashSet<String>();
+
+  static Set<AbstractCacheManager> cacheManagers = new LinkedHashSet<>();
+
   @Override
   public Collection<Cache> getCaches(String name) {
     ConcurrentMap<String, Cache> cacheMap = cacheContainer.get(name);
     if (cacheMap.isEmpty()) {
-      return null;
+      return Collections.emptyList();
     }
     return cacheMap.values();
   }
@@ -37,17 +41,39 @@ public class AbstractCacheManager implements CacheManager {
   public Cache getCache(String name, MomaCacheSetting momaCacheSetting) {
     ConcurrentMap<String, Cache> cacheMap = cacheContainer.get(name);
     if (!cacheMap.isEmpty()) {
-      if (1 < cacheMap.size()) {
-        logger.warn("存在同名不同配置的缓存，name:{}, size：{}", name, cacheMap.size());
-      }
       Cache cache = cacheMap.get(momaCacheSetting.getCacheId());
+      if (null != cache) {
+        return cache;
+      }
     }
-
-    return null;
+    synchronized (this.cacheContainer) {
+      cacheMap = cacheContainer.get(name);
+      if (!cacheMap.isEmpty()) {
+        Cache cache = cacheMap.get(momaCacheSetting.getCacheId());
+        if (null != cache) {
+          return cache;
+        }
+      } else {
+        cacheMap = new ConcurrentHashMap<>(16);
+        cacheContainer.put(name, cacheMap);
+        updateCacheNames(name);
+      }
+      Cache cache = buildMomaCache(name, momaCacheSetting);
+      if (null != cache) {
+        cacheMap.put(momaCacheSetting.getCacheId(), cache);
+      }
+      return cache;
+    }
   }
 
   @Override
   public Collection<String> getCacheNames() {
-    return null;
+    return cacheNames;
   }
+
+  private void updateCacheNames(String name) {
+    cacheNames.add(name);
+  }
+
+  protected abstract Cache buildMomaCache(String name, MomaCacheSetting momaCacheSetting);
 }

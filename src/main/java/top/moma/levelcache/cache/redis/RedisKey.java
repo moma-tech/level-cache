@@ -24,7 +24,7 @@ public class RedisKey {
 
   public RedisKey(Object key, RedisSerializer keySerializer) {
     Assert.notNull(key, "Key can not be Null");
-    Assert.notNull(keySerializer, "Serializer can not be nu ll");
+    Assert.notNull(keySerializer, "Serializer can not be null");
     this.keyBody = key;
     this.keySerializer = keySerializer;
   }
@@ -32,7 +32,7 @@ public class RedisKey {
   public RedisKey(String prefix, boolean usePrefix, Object key, RedisSerializer keySerializer) {
 
     Assert.notNull(key, "Key can not be Null");
-    Assert.notNull(keySerializer, "Serializer can not be nu ll");
+    Assert.notNull(keySerializer, "Serializer can not be null");
     this.prefix = prefix;
     this.usePrefix = usePrefix;
     this.keyBody = key;
