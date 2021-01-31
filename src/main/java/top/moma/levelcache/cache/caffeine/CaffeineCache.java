@@ -3,8 +3,7 @@ package top.moma.levelcache.cache.caffeine;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.support.AbstractValueAdaptingCache;
 import org.springframework.cache.support.NullValue;
 import top.moma.levelcache.setting.CaffeineCacheSetting;
@@ -15,26 +14,28 @@ import java.util.concurrent.Callable;
 /**
  * CaffeineCache
  *
+ * <p>禁止key为null
+ *
  * @author Created by ivan on 2020/6/29 .
  * @version 1.0
  */
+@Slf4j
 public class CaffeineCache extends AbstractValueAdaptingCache {
-  protected static final Logger logger = LoggerFactory.getLogger(CaffeineCache.class);
 
-  /** caffeine Cache */
+  /** native caffeine Cache */
   private final Cache<Object, Object> caffeineCache;
+  /** 1st level Cahce Name */
+  private final String caffeineName;
 
-  private final String name;
-
-  public CaffeineCache(String name, CaffeineCacheSetting caffeineCacheSetting) {
+  public CaffeineCache(String caffeineName, CaffeineCacheSetting caffeineCacheSetting) {
     super(false);
-    this.name = name;
+    this.caffeineName = caffeineName;
     caffeineCache = builtCache(caffeineCacheSetting);
   }
 
   @Override
   public String getName() {
-    return name;
+    return caffeineName;
   }
 
   @Override
@@ -44,7 +45,7 @@ public class CaffeineCache extends AbstractValueAdaptingCache {
 
   @Override
   protected Object lookup(Object key) {
-    logger.debug("caffeine缓存 key={} get缓存", JacksonHelper.toJson(key));
+    log.debug("caffeine缓存 key={} look up缓存", JacksonHelper.toJson(key));
     if (caffeineCache instanceof LoadingCache) {
       return ((LoadingCache<Object, Object>) caffeineCache).get(key);
     } else {
@@ -54,7 +55,7 @@ public class CaffeineCache extends AbstractValueAdaptingCache {
 
   @Override
   public <T> T get(Object key, Callable<T> valueLoader) {
-    logger.debug("caffeine缓存 key={} get缓存, 不存在，执行后续", JacksonHelper.toJson(key));
+    log.debug("caffeine缓存 key={} get缓存, 不存在，执行后续", JacksonHelper.toJson(key));
     Object value =
         caffeineCache.get(
             key,
@@ -66,7 +67,7 @@ public class CaffeineCache extends AbstractValueAdaptingCache {
               }
             });
     if (null == value || value instanceof NullValue) {
-      logger.error("Caffeine缓存不允许存NULL值，不缓存数据");
+      log.error("Caffeine缓存不允许存NULL值，不缓存数据");
       evict(key);
     }
     return (T) fromStoreValue(value);
@@ -75,18 +76,18 @@ public class CaffeineCache extends AbstractValueAdaptingCache {
   @Override
   public void put(Object key, Object value) {
     if (null != value && !(value instanceof NullValue)) {
-      logger.debug(
+      log.debug(
           "caffeine缓存 key={} put缓存，缓存值：{}", JacksonHelper.toJson(key), JacksonHelper.toJson(value));
       this.caffeineCache.put(key, toStoreValue(value));
     } else {
-      logger.error("Caffeine缓存不允许存NULL值，不缓存数据");
+      log.error("Caffeine缓存不允许存NULL值，不缓存数据");
     }
   }
 
   @Override
   public ValueWrapper putIfAbsent(Object key, Object value) {
     if (null != value && !(value instanceof NullValue)) {
-      logger.debug(
+      log.debug(
           "caffeine缓存 key={} put if absent 缓存，缓存值：{}",
           JacksonHelper.toJson(key),
           JacksonHelper.toJson(value));
@@ -96,20 +97,20 @@ public class CaffeineCache extends AbstractValueAdaptingCache {
       }
       return existed;
     } else {
-      logger.error("Caffeine缓存不允许存NULL值，不缓存数据");
+      log.error("Caffeine缓存不允许存NULL值，不缓存数据");
       return null;
     }
   }
 
   @Override
   public void evict(Object key) {
-    logger.debug("caffeine清除缓存 key={}", JacksonHelper.toJson(key));
+    log.debug("caffeine清除缓存 key={}", JacksonHelper.toJson(key));
     caffeineCache.invalidate(key);
   }
 
   @Override
   public void clear() {
-    logger.debug("caffeine 清空缓存");
+    log.debug("caffeine 清空缓存");
     caffeineCache.invalidateAll();
   }
 

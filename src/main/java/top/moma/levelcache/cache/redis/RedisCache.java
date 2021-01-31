@@ -1,7 +1,6 @@
 package top.moma.levelcache.cache.redis;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.support.AbstractValueAdaptingCache;
 import org.springframework.cache.support.NullValue;
 import org.springframework.data.redis.connection.RedisClusterConnection;
@@ -26,14 +25,19 @@ import java.util.concurrent.TimeUnit;
 /**
  * RedisCache
  *
+ * <p>key可以为null
+ *
  * @author Created by ivan on 2020/7/1 .
  * @version 1.0
  */
+@Slf4j
 public class RedisCache extends AbstractValueAdaptingCache {
-  private static final Logger logger = LoggerFactory.getLogger(RedisCache.class);
 
-  /** Cache name */
-  private final String name;
+  /** Native Redis Cache */
+  private RedisTemplate<String, Object> redisTemplate;
+
+  /** 2nd Cache name */
+  private final String redisName;
 
   /** 缓存过期时间 */
   private long expiration;
@@ -54,16 +58,14 @@ public class RedisCache extends AbstractValueAdaptingCache {
 
   private LocalThreadPool localThreadPool = new LocalThreadPool();
 
-  private RedisTemplate<String, Object> redisTemplate;
-
   public RedisCache(
-      String name,
+      String redisName,
       boolean allowNullValues,
       RedisCacheSetting setting,
       RedisTemplate<String, Object> redisTemplate) {
     this(
         allowNullValues,
-        name,
+        redisName,
         setting.getExpireTime(),
         setting.getTimeUnit(),
         setting.isUsePrefix(),
@@ -77,7 +79,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
 
   public RedisCache(
       boolean allowNullValues,
-      String name,
+      String redisName,
       long expiration,
       TimeUnit timeUnit,
       boolean usePrefix,
@@ -88,7 +90,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
       RedisCacheSetting.RedisExpireMode redisExpireMode,
       RedisTemplate<String, Object> redisTemplate) {
     super(allowNullValues);
-    this.name = name;
+    this.redisName = redisName;
     this.expiration = expiration;
     this.timeUnit = timeUnit;
     this.usePrefix = usePrefix;
@@ -101,15 +103,8 @@ public class RedisCache extends AbstractValueAdaptingCache {
   }
 
   @Override
-  protected Object lookup(Object key) {
-    RedisKey redisKey = getRedisKey(key);
-    logger.debug("redis缓存 key={} get缓存", JacksonHelper.toJson(redisKey.getRedisKey()));
-    return redisTemplate.opsForValue().get(redisKey.getRedisKey());
-  }
-
-  @Override
   public String getName() {
-    return this.name;
+    return this.redisName;
   }
 
   @Override
@@ -118,9 +113,16 @@ public class RedisCache extends AbstractValueAdaptingCache {
   }
 
   @Override
+  protected Object lookup(Object key) {
+    RedisKey redisKey = getRedisKey(key);
+    log.debug("redis缓存 key={} look up缓存", redisKey.getRedisKey());
+    return redisTemplate.opsForValue().get(redisKey.getRedisKey());
+  }
+
+  @Override
   public <T> T get(Object key, Callable<T> valueLoader) {
     RedisKey redisKey = getRedisKey(key);
-    logger.debug("redis缓存 key={} get缓存", JacksonHelper.toJson(redisKey.getRedisKey()));
+    log.debug("redis缓存 key={} get缓存", redisKey.getRedisKey());
     Object result = redisTemplate.opsForValue().get(redisKey.getRedisKey());
     // KEY 存在, 未正确序列化可能存在空值
     if (Objects.nonNull(result) || redisTemplate.hasKey(redisKey.getRedisKey())) {
@@ -138,7 +140,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
   @Override
   public void put(Object key, Object value) {
     RedisKey redisKey = getRedisKey(key);
-    logger.debug(
+    log.debug(
         "redis缓存 key={} put缓存，缓存值：{}",
         JacksonHelper.toJson(redisKey.getRedisKey()),
         JacksonHelper.toJson(value));
@@ -148,14 +150,14 @@ public class RedisCache extends AbstractValueAdaptingCache {
   @Override
   public void evict(Object key) {
     RedisKey redisKey = getRedisKey(key);
-    logger.debug("redis清除缓存 key={}", JacksonHelper.toJson(redisKey.getRedisKey()));
+    log.debug("redis清除缓存 key={}", JacksonHelper.toJson(redisKey.getRedisKey()));
     redisTemplate.delete(redisKey.getRedisKey());
   }
 
   @Override
   public void clear() {
     if (usePrefix) {
-      logger.info("清空redis缓存 ，缓存前缀为{}", getName());
+      log.info("清空redis缓存 ，缓存前缀为{}", getName());
       String pattern = getName() + "*";
       Set<String> keys =
           redisTemplate.execute(
@@ -203,7 +205,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
       this.redisTemplate.opsForValue().set(redisKey.getRedisKey(), result, expiration, timeUnit);
       return result;
     } else if (isAllowNullValues()) {
-      logger.debug(
+      log.debug(
           "redis缓存 key={} put缓存，缓存值为value={}，独立超时时间，防穿透",
           JacksonHelper.toJson(redisKey.getRedisKey()),
           JacksonHelper.toJson(value));
@@ -213,7 +215,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
       return result;
     } else {
       this.redisTemplate.opsForValue().getOperations().delete(redisKey.getRedisKey());
-      logger.error("Redis 缓存不允许存NULL值，不缓存数据");
+      log.error("Redis 缓存不允许存NULL值，不缓存数据");
       return result;
     }
   }
@@ -227,7 +229,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
    * @return top.moma.levelcache.cache.redis.RedisKey
    */
   private RedisKey getRedisKey(Object key) {
-    return new RedisKey(key, redisTemplate.getKeySerializer()).prefix(usePrefix, name);
+    return new RedisKey(key, redisTemplate.getKeySerializer()).prefix(usePrefix, redisName);
   }
 
   /**
@@ -246,13 +248,12 @@ public class RedisCache extends AbstractValueAdaptingCache {
     for (int i = 0; i < CacheConstants.RETRY_MAX; i++) {
       Object result = redisTemplate.opsForValue().get(redisKey.getRedisKey());
       if (Objects.nonNull(result)) {
-        logger.debug("redis 缓存 key={}，循环缓存中获得", JacksonHelper.toJson(redisKey.getRedisKey()));
+        log.debug("redis 缓存 key={}，循环缓存中获得", JacksonHelper.toJson(redisKey.getRedisKey()));
         return (T) fromStoreValue(result);
       }
       try {
         if (redisSimpleLock.lock(redisKey.getRedisKey(), lockValue)) {
-          logger.debug(
-              "redis 缓存, key={},加锁成功，执行方法获取", JacksonHelper.toJson(redisKey.getRedisKey()));
+          log.debug("redis 缓存, key={},加锁成功，执行方法获取", JacksonHelper.toJson(redisKey.getRedisKey()));
           T value = callValueMethod(redisKey, valueLoader);
           localThreadPool.signalAll(redisKey.getRedisKey());
           return value;
@@ -264,8 +265,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
         redisSimpleLock.unlock(redisKey.getRedisKey(), lockValue);
       }
     }
-    logger.debug(
-        "redis 缓存, key={}, 多次取锁失败, 尝试直接执行方法获取", JacksonHelper.toJson(redisKey.getRedisKey()));
+    log.debug("redis 缓存, key={}, 多次取锁失败, 尝试直接执行方法获取", JacksonHelper.toJson(redisKey.getRedisKey()));
     return callValueMethod(redisKey, valueLoader);
   }
 
@@ -280,10 +280,10 @@ public class RedisCache extends AbstractValueAdaptingCache {
   private <T> T callValueMethod(RedisKey redisKey, Callable<T> valueLoader) {
     try {
       Object result = putValue(redisKey, valueLoader.call());
-      logger.debug("redis缓存 key={} get缓存, 执行后续方法", JacksonHelper.toJson(redisKey.getRedisKey()));
+      log.debug("redis缓存 key={} get缓存, 执行后续方法", JacksonHelper.toJson(redisKey.getRedisKey()));
       return (T) fromStoreValue(result);
     } catch (Exception e) {
-      logger.error(
+      log.error(
           "redis缓存，取值方法获取失败，key={}",
           JacksonHelper.toJson(redisKey.getRedisKey()),
           e.fillInStackTrace());
@@ -303,10 +303,10 @@ public class RedisCache extends AbstractValueAdaptingCache {
     Long ttl = redisTemplate.getExpire(redisKey.getRedisKey());
     if (null != ttl && 0 < ttl && TimeUnit.SECONDS.toMillis(ttl) <= renewThreshold) {
       if (hardRefresh) {
-        logger.debug("redis刷新缓存 hard key={}", JacksonHelper.toJson(redisKey.getRedisKey()));
+        log.debug("redis刷新缓存 hard key={}", JacksonHelper.toJson(redisKey.getRedisKey()));
         hardRefresh(redisKey, valueLoader);
       } else {
-        logger.debug("redis刷新缓存 soft key={}", JacksonHelper.toJson(redisKey.getRedisKey()));
+        log.debug("redis刷新缓存 soft key={}", JacksonHelper.toJson(redisKey.getRedisKey()));
         softRefresh(redisKey);
       }
     }
@@ -327,7 +327,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
         redisTemplate.expire(redisKey.getRedisKey(), this.expiration, TimeUnit.MILLISECONDS);
       }
     } catch (Exception e) {
-      logger.error(e.getMessage(), e);
+      log.error(e.getMessage(), e);
     } finally {
       redisSimpleLock.unlock(CacheConstants.LOCK_PREFIX + redisKey.getRedisKey(), lockValue);
     }
