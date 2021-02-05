@@ -14,7 +14,7 @@ import java.util.concurrent.Callable;
 /**
  * CaffeineCache
  *
- * <p>禁止key为null
+ * <p>没有超时机制，为节省本地内存，禁止value为null
  *
  * @author Created by ivan on 2020/6/29 .
  * @version 1.0
@@ -24,7 +24,7 @@ public class CaffeineCache extends AbstractValueAdaptingCache {
 
   /** native caffeine Cache */
   private final Cache<Object, Object> caffeineCache;
-  /** 1st level Cahce Name */
+  /** 1st level Cache Name */
   private final String caffeineName;
 
   public CaffeineCache(String caffeineName, CaffeineCacheSetting caffeineCacheSetting) {

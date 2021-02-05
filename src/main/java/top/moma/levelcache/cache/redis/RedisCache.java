@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * RedisCache
  *
- * <p>key可以为null
+ * <p>Value可以为null，null值存活时间减半
  *
  * @author Created by ivan on 2020/7/1 .
  * @version 1.0
@@ -283,10 +283,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
       log.debug("redis缓存 key={} get缓存, 执行后续方法", JacksonHelper.toJson(redisKey.getRedisKey()));
       return (T) fromStoreValue(result);
     } catch (Exception e) {
-      log.error(
-          "redis缓存，取值方法获取失败，key={}",
-          JacksonHelper.toJson(redisKey.getRedisKey()),
-          e);
+      log.error("redis缓存，取值方法获取失败，key={}", JacksonHelper.toJson(redisKey.getRedisKey()), e);
       throw new ValueRetrievalException(redisKey.getRedisKey(), valueLoader, e);
     }
   }
@@ -327,7 +324,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
         redisTemplate.expire(redisKey.getRedisKey(), this.expiration, TimeUnit.MILLISECONDS);
       }
     } catch (Exception e) {
-      log.error(e.getMessage(), e);
+      log.error("Redis 软刷新错误：", e);
     } finally {
       redisSimpleLock.unlock(CacheConstants.LOCK_PREFIX + redisKey.getRedisKey(), lockValue);
     }
