@@ -13,8 +13,10 @@ import top.moma.levelcache.support.CacheConstants;
 import top.moma.levelcache.support.JacksonHelper;
 import top.moma.levelcache.support.LocalThreadPool;
 import top.moma.levelcache.support.ThreadTaskUtils;
+import top.moma.m64.core.constants.StringConstants;
 import top.moma.m64.core.helper.CollectionHelper;
 import top.moma.m64.core.helper.ObjectHelper;
+import top.moma.m64.core.helper.TypeHelper;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -122,16 +124,17 @@ public class RedisCache extends AbstractValueAdaptingCache {
   @Override
   public <T> T get(Object key, Callable<T> valueLoader) {
     RedisKey redisKey = getRedisKey(key);
-    log.debug("redis缓存 key={} get缓存", redisKey.getRedisKey());
-    Object result = redisTemplate.opsForValue().get(redisKey.getRedisKey());
+    String cacheKey = redisKey.getRedisKey();
+    log.debug("redis缓存 key={} get缓存", cacheKey);
+    Object result = redisTemplate.opsForValue().get(cacheKey);
     // KEY 存在, 未正确序列化可能存在空值
-    if (ObjectHelper.isNotEmpty(result) || redisTemplate.hasKey(redisKey.getRedisKey())) {
+    if (ObjectHelper.isNotEmpty(result)) {
       // auto renew enabled or redis expired mode set to after access
       if (autoRenew
           || RedisCacheSetting.RedisExpireMode.refreshAfterAccess.equals(this.redisExpireMode)) {
         refreshCache(redisKey, valueLoader);
       }
-      return (T) fromStoreValue(result);
+      return TypeHelper.cast(fromStoreValue(result));
     }
     // 　方法获取
     return lockGetValueMethod(redisKey, valueLoader);
@@ -140,17 +143,14 @@ public class RedisCache extends AbstractValueAdaptingCache {
   @Override
   public void put(Object key, Object value) {
     RedisKey redisKey = getRedisKey(key);
-    log.debug(
-        "redis缓存 key={} put缓存，缓存值：{}",
-        JacksonHelper.toJson(redisKey.getRedisKey()),
-        JacksonHelper.toJson(value));
+    log.debug("redis缓存 key={} put缓存，缓存值：{}", redisKey.getRedisKey(), JacksonHelper.toJson(value));
     this.putValue(redisKey, value);
   }
 
   @Override
   public void evict(Object key) {
     RedisKey redisKey = getRedisKey(key);
-    log.debug("redis清除缓存 key={}", JacksonHelper.toJson(redisKey.getRedisKey()));
+    log.debug("redis清除缓存 key={}", redisKey.getRedisKey());
     redisTemplate.delete(redisKey.getRedisKey());
   }
 
@@ -177,7 +177,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
                                 .build())) {
 
                       while (cursor.hasNext()) {
-                        keysTmp.add(new String(cursor.next(), "Utf-8"));
+                        keysTmp.add(new String(cursor.next(), StringConstants.UTF_8));
                       }
                     } catch (Exception e) {
                       throw new RuntimeException(e);
@@ -207,7 +207,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
     } else if (isAllowNullValues()) {
       log.debug(
           "redis缓存 key={} put缓存，缓存值为value={}，独立超时时间，防穿透",
-          JacksonHelper.toJson(redisKey.getRedisKey()),
+          redisKey.getRedisKey(),
           JacksonHelper.toJson(value));
       this.redisTemplate
           .opsForValue()
@@ -249,7 +249,8 @@ public class RedisCache extends AbstractValueAdaptingCache {
       Object result = redisTemplate.opsForValue().get(redisKey.getRedisKey());
       if (ObjectHelper.isNotEmpty(result)) {
         log.debug("redis 缓存 key={}，循环缓存中获得", JacksonHelper.toJson(redisKey.getRedisKey()));
-        return (T) fromStoreValue(result);
+        return TypeHelper.cast(fromStoreValue(result));
+        // return (T) fromStoreValue(result);
       }
       try {
         if (redisSimpleLock.lock(redisKey.getRedisKey(), lockValue)) {
@@ -281,7 +282,8 @@ public class RedisCache extends AbstractValueAdaptingCache {
     try {
       Object result = putValue(redisKey, valueLoader.call());
       log.debug("redis缓存 key={} get缓存, 执行后续方法", JacksonHelper.toJson(redisKey.getRedisKey()));
-      return (T) fromStoreValue(result);
+
+      return TypeHelper.cast(fromStoreValue(result));
     } catch (Exception e) {
       log.error("redis缓存，取值方法获取失败，key={}", JacksonHelper.toJson(redisKey.getRedisKey()), e);
       throw new ValueRetrievalException(redisKey.getRedisKey(), valueLoader, e);
