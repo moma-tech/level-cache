@@ -1,7 +1,7 @@
 package top.moma.levelcache.cache;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
+import org.omg.CORBA.ObjectHelper;
 import org.springframework.cache.support.AbstractValueAdaptingCache;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.util.StringUtils;
@@ -19,8 +19,8 @@ import java.util.concurrent.Callable;
  * @author Created by ivan on 2020/7/16 .
  * @version 1.0
  */
+@Slf4j
 public class MomaCache extends AbstractValueAdaptingCache {
-  private static final Logger logger = LoggerFactory.getLogger(MomaCache.class);
 
   private String momaCacheName;
 
@@ -39,6 +39,7 @@ public class MomaCache extends AbstractValueAdaptingCache {
     super(allowNullValues);
     this.redisTemplate = redisTemplate;
     this.cacheMode = momaCacheSetting.getCacheMode();
+    
     switch (cacheMode) {
       case REDIS_CACHE_ONLY:
         this.caffeineCache = null;

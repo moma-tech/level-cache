@@ -8,15 +8,15 @@ import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
-import org.springframework.util.CollectionUtils;
 import top.moma.levelcache.setting.RedisCacheSetting;
 import top.moma.levelcache.support.CacheConstants;
 import top.moma.levelcache.support.JacksonHelper;
 import top.moma.levelcache.support.LocalThreadPool;
 import top.moma.levelcache.support.ThreadTaskUtils;
+import top.moma.m64.core.helper.CollectionHelper;
+import top.moma.m64.core.helper.ObjectHelper;
 
 import java.util.HashSet;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -125,7 +125,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
     log.debug("redis缓存 key={} get缓存", redisKey.getRedisKey());
     Object result = redisTemplate.opsForValue().get(redisKey.getRedisKey());
     // KEY 存在, 未正确序列化可能存在空值
-    if (Objects.nonNull(result) || redisTemplate.hasKey(redisKey.getRedisKey())) {
+    if (ObjectHelper.isNotEmpty(result) || redisTemplate.hasKey(redisKey.getRedisKey())) {
       // auto renew enabled or redis expired mode set to after access
       if (autoRenew
           || RedisCacheSetting.RedisExpireMode.refreshAfterAccess.equals(this.redisExpireMode)) {
@@ -184,8 +184,8 @@ public class RedisCache extends AbstractValueAdaptingCache {
                     }
                     return keysTmp;
                   });
-      ;
-      if (!CollectionUtils.isEmpty(keys)) {
+
+      if (CollectionHelper.isNotEmpty(keys)) {
         redisTemplate.delete(keys);
       }
     }
@@ -247,7 +247,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
     String lockValue = UUID.randomUUID().toString();
     for (int i = 0; i < CacheConstants.RETRY_MAX; i++) {
       Object result = redisTemplate.opsForValue().get(redisKey.getRedisKey());
-      if (Objects.nonNull(result)) {
+      if (ObjectHelper.isNotEmpty(result)) {
         log.debug("redis 缓存 key={}，循环缓存中获得", JacksonHelper.toJson(redisKey.getRedisKey()));
         return (T) fromStoreValue(result);
       }
