@@ -82,29 +82,25 @@
                 <checksumPolicy>fail</checksumPolicy>
             </snapshots>
         </repository>
-
+        
         <repository>
-            <id>maven-repo1</id>
-            <url>https://repo1.maven.org/maven2/</url>
+            <id>rdc-releases</id>
+            <url>https://packages.aliyun.com/maven/repository/2070265-release-VlmW8L/</url>
             <releases>
                 <enabled>true</enabled>
             </releases>
             <snapshots>
-                <enabled>true</enabled>
-                <updatePolicy>always</updatePolicy>
-                <checksumPolicy>fail</checksumPolicy>
+                <enabled>false</enabled>
             </snapshots>
         </repository>
         <repository>
-            <id>maven-center2</id>
-            <url>http://central.maven.org/maven2/</url>
+            <id>rdc-snapshots</id>
+            <url>https://packages.aliyun.com/maven/repository/2070265-snapshot-xIjyM8/</url>
             <releases>
-                <enabled>true</enabled>
+                <enabled>false</enabled>
             </releases>
             <snapshots>
                 <enabled>true</enabled>
-                <updatePolicy>always</updatePolicy>
-                <checksumPolicy>fail</checksumPolicy>
             </snapshots>
         </repository>
     </repositories>

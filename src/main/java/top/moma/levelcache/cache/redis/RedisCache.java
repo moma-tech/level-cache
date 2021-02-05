@@ -286,7 +286,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
       log.error(
           "redis缓存，取值方法获取失败，key={}",
           JacksonHelper.toJson(redisKey.getRedisKey()),
-          e.fillInStackTrace());
+          e);
       throw new ValueRetrievalException(redisKey.getRedisKey(), valueLoader, e);
     }
   }
