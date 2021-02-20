@@ -7,7 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.support.AbstractValueAdaptingCache;
 import org.springframework.cache.support.NullValue;
 import top.moma.levelcache.setting.CaffeineCacheSetting;
-import top.moma.levelcache.support.JacksonHelper;
+import top.moma.m64.core.helper.TypeHelper;
+import top.moma.m64.core.helper.json.JsonHelper;
 
 import java.util.concurrent.Callable;
 
@@ -45,7 +46,7 @@ public class CaffeineCache extends AbstractValueAdaptingCache {
 
   @Override
   protected Object lookup(Object key) {
-    log.debug("caffeine缓存 key={} look up缓存", JacksonHelper.toJson(key));
+    log.debug("caffeine缓存 key={} look up缓存", JsonHelper.toJson(key));
     if (caffeineCache instanceof LoadingCache) {
       return ((LoadingCache<Object, Object>) caffeineCache).get(key);
     } else {
@@ -55,7 +56,7 @@ public class CaffeineCache extends AbstractValueAdaptingCache {
 
   @Override
   public <T> T get(Object key, Callable<T> valueLoader) {
-    log.debug("caffeine缓存 key={} get缓存, 不存在，执行后续", JacksonHelper.toJson(key));
+    log.debug("caffeine缓存 key={} get缓存, 不存在，执行后续", JsonHelper.toJson(key));
     Object value =
         caffeineCache.get(
             key,
@@ -70,14 +71,13 @@ public class CaffeineCache extends AbstractValueAdaptingCache {
       log.error("Caffeine缓存不允许存NULL值，不缓存数据");
       evict(key);
     }
-    return (T) fromStoreValue(value);
+    return TypeHelper.cast(fromStoreValue(value));
   }
 
   @Override
   public void put(Object key, Object value) {
     if (null != value && !(value instanceof NullValue)) {
-      log.debug(
-          "caffeine缓存 key={} put缓存，缓存值：{}", JacksonHelper.toJson(key), JacksonHelper.toJson(value));
+      log.debug("caffeine缓存 key={} put缓存，缓存值：{}", JsonHelper.toJson(key), JsonHelper.toJson(value));
       this.caffeineCache.put(key, toStoreValue(value));
     } else {
       log.error("Caffeine缓存不允许存NULL值，不缓存数据");
@@ -89,8 +89,8 @@ public class CaffeineCache extends AbstractValueAdaptingCache {
     if (null != value && !(value instanceof NullValue)) {
       log.debug(
           "caffeine缓存 key={} put if absent 缓存，缓存值：{}",
-          JacksonHelper.toJson(key),
-          JacksonHelper.toJson(value));
+          JsonHelper.toJson(key),
+          JsonHelper.toJson(value));
       ValueWrapper existed = this.get(key);
       if (null == existed) {
         this.put(key, value);
@@ -104,7 +104,7 @@ public class CaffeineCache extends AbstractValueAdaptingCache {
 
   @Override
   public void evict(Object key) {
-    log.debug("caffeine清除缓存 key={}", JacksonHelper.toJson(key));
+    log.debug("caffeine清除缓存 key={}", JsonHelper.toJson(key));
     caffeineCache.invalidate(key);
   }
 

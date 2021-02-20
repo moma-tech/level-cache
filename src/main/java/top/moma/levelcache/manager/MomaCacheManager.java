@@ -24,4 +24,14 @@ public class MomaCacheManager extends AbstractCacheManager {
   protected Cache buildMomaCache(String name, MomaCacheSetting momaCacheSetting) {
     return new MomaCache(name, false, momaCacheSetting, redisTemplate);
   }
+
+  @Override
+  public boolean equals(Object o) {
+    return super.equals(o);
+  }
+
+  @Override
+  public int hashCode() {
+    return super.hashCode();
+  }
 }

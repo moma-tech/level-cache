@@ -1,6 +1,6 @@
 package top.moma.levelcache.support;
 
-import org.springframework.util.CollectionUtils;
+import top.moma.m64.core.helper.CollectionHelper;
 
 import java.util.Comparator;
 import java.util.Map;
@@ -44,9 +44,9 @@ public class LocalThreadPool {
    */
   public final void signalAll(String key) {
     Set<Thread> threadSet = threadConMap.get(key);
-    if (!CollectionUtils.isEmpty(threadSet)) {
+    if (CollectionHelper.isNotEmpty(threadSet)) {
       synchronized (threadSet) {
-        if (!CollectionUtils.isEmpty(threadSet)) {
+        if (CollectionHelper.isNotEmpty(threadSet)) {
           for (Thread thread : threadSet) {
             LockSupport.unpark(thread);
           }

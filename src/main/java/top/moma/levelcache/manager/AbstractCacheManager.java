@@ -1,12 +1,12 @@
 package top.moma.levelcache.manager;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
 import top.moma.levelcache.setting.MomaCacheSetting;
+import top.moma.m64.core.helper.CollectionHelper;
+import top.moma.m64.core.helper.ObjectHelper;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
@@ -17,14 +17,14 @@ import java.util.concurrent.ConcurrentMap;
  * @author Ivan
  * @version 1.0 Created by Ivan at 2020/11/21.
  */
+@Slf4j
 public abstract class AbstractCacheManager implements CacheManager {
-  private Logger logger = LoggerFactory.getLogger(AbstractCacheManager.class);
 
   /** Cache Containers Two Levels */
   private final ConcurrentMap<String, ConcurrentMap<String, Cache>> cacheContainer =
-      new ConcurrentHashMap<>(16);
+      CollectionHelper.newConcurrentMap();
 
-  private volatile Set<String> cacheNames = new HashSet<String>();
+  private volatile Set<String> cacheNames = new HashSet<>();
 
   static Set<AbstractCacheManager> cacheManagers = new LinkedHashSet<>();
 
@@ -40,26 +40,27 @@ public abstract class AbstractCacheManager implements CacheManager {
   @Override
   public Cache getCache(String name, MomaCacheSetting momaCacheSetting) {
     ConcurrentMap<String, Cache> cacheMap = cacheContainer.get(name);
-    if (!cacheMap.isEmpty()) {
+    if (ObjectHelper.isNotEmpty(cacheMap)) {
       Cache cache = cacheMap.get(momaCacheSetting.getCacheId());
-      if (null != cache) {
+      if (ObjectHelper.isNotEmpty(cache)) {
         return cache;
       }
     }
     synchronized (this.cacheContainer) {
       cacheMap = cacheContainer.get(name);
-      if (!cacheMap.isEmpty()) {
+      if (ObjectHelper.isNotEmpty(cacheMap)) {
         Cache cache = cacheMap.get(momaCacheSetting.getCacheId());
-        if (null != cache) {
+        if (ObjectHelper.isNotEmpty(cache)) {
           return cache;
         }
       } else {
-        cacheMap = new ConcurrentHashMap<>(16);
+        cacheMap = CollectionHelper.newConcurrentMap();
         cacheContainer.put(name, cacheMap);
         updateCacheNames(name);
       }
       Cache cache = buildMomaCache(name, momaCacheSetting);
-      if (null != cache) {
+      if (ObjectHelper.isNotEmpty(cache)) {
+        cache = decorator(cache);
         cacheMap.put(momaCacheSetting.getCacheId(), cache);
       }
       return cache;
@@ -76,4 +77,8 @@ public abstract class AbstractCacheManager implements CacheManager {
   }
 
   protected abstract Cache buildMomaCache(String name, MomaCacheSetting momaCacheSetting);
+
+  protected Cache decorator(Cache cache) {
+    return cache;
+  }
 }

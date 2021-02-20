@@ -3,9 +3,10 @@ package top.moma.levelcache.cache.redis;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.util.Assert;
-import org.springframework.util.StringUtils;
+import top.moma.levelcache.support.CacheConstants;
+import top.moma.m64.core.constants.StringConstants;
+import top.moma.m64.core.helper.StringHelper;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 /**
@@ -15,7 +16,6 @@ import java.util.Arrays;
  * @version 1.0
  */
 public class RedisKey {
-  private final String DEFAULT_PREFIX = "moma-redis";
   private String prefix;
   private boolean usePrefix = false;
 
@@ -41,8 +41,8 @@ public class RedisKey {
 
   public RedisKey prefix(boolean usePrefix, String keyPrefix) {
     this.usePrefix = usePrefix;
-    if (StringUtils.isEmpty(keyPrefix)) {
-      this.prefix = DEFAULT_PREFIX;
+    if (StringHelper.isEmpty(keyPrefix)) {
+      this.prefix = CacheConstants.DEFAULT_PREFIX;
     } else {
       this.prefix = keyPrefix;
     }
@@ -55,9 +55,9 @@ public class RedisKey {
       byte[] prefixKey = this.serializeKeyPrefix();
       byte[] finalKey = Arrays.copyOf(prefixKey, prefixKey.length + bodyKey.length);
       System.arraycopy(bodyKey, 0, finalKey, prefixKey.length, bodyKey.length);
-      return new String(finalKey, StandardCharsets.UTF_8);
+      return StringHelper.toString(finalKey, StringConstants.UTF_8);
     }
-    return new String(this.serializeKeyBody(), StandardCharsets.UTF_8);
+    return StringHelper.toString(this.serializeKeyBody(), StringConstants.UTF_8);
   }
 
   private byte[] serializeKeyBody() {
@@ -66,7 +66,7 @@ public class RedisKey {
 
   private byte[] serializeKeyPrefix() {
     RedisSerializer<String> prefixSerializer = new StringRedisSerializer();
-    if (!StringUtils.isEmpty(prefix)) {
+    if (StringHelper.isNotEmpty(prefix)) {
       return prefixSerializer.serialize(prefix);
     } else {
       return new byte[0];

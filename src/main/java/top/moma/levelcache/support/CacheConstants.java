@@ -11,4 +11,5 @@ public interface CacheConstants {
   String LOCK_PREFIX = "LOCK-";
   int RETRY_MAX = 5;
   long WAIT_TIME = 20;
+  String DEFAULT_PREFIX = "moma-redis";
 }

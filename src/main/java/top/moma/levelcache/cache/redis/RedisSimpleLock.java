@@ -1,12 +1,11 @@
 package top.moma.levelcache.cache.redis;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.util.StringUtils;
-import top.moma.levelcache.support.JacksonHelper;
+import top.moma.m64.core.helper.ObjectHelper;
+import top.moma.m64.core.helper.StringHelper;
+import top.moma.m64.core.helper.json.JsonHelper;
 
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -17,14 +16,14 @@ import java.util.concurrent.TimeUnit;
  * @author Created by ivan on 2020/7/9 .
  * @version 1.0
  */
+@Slf4j
 public class RedisSimpleLock {
-  protected static final Logger logger = LoggerFactory.getLogger(RedisSimpleLock.class);
 
   private final long LOCK_MAX_TIME = 2000;
   private final int RETRY_MAX_TIME = 4;
-  private RedisTemplate redisTemplate;
+  private RedisTemplate<String, Object> redisTemplate;
 
-  public RedisSimpleLock(RedisTemplate redisTemplate) {
+  public RedisSimpleLock(RedisTemplate<String, Object> redisTemplate) {
     this.redisTemplate = redisTemplate;
   }
 
@@ -37,8 +36,8 @@ public class RedisSimpleLock {
             redisTemplate
                 .opsForValue()
                 .setIfAbsent(key, value, LOCK_MAX_TIME, TimeUnit.MILLISECONDS);
-        if (Objects.nonNull(locked) && locked) {
-          logger.debug("redis lock获取 key={} ", JacksonHelper.toJson(key));
+        if (ObjectHelper.isNotEmpty(locked) && locked) {
+          log.debug("redis lock获取 key={} ", JsonHelper.toJson(key));
           return true;
         }
         Thread.sleep(100);
@@ -46,16 +45,16 @@ public class RedisSimpleLock {
       }
 
     } catch (Exception e) {
-      logger.error("redis lock获取异常 key={}", e.fillInStackTrace());
+      log.error("redis lock获取异常 key={}", JsonHelper.toJson(key), e);
     }
-    logger.debug("redis lock获取失败 key={} ", JacksonHelper.toJson(key));
+    log.debug("redis lock获取失败 key={} ", JsonHelper.toJson(key));
     return false;
   }
 
   public void unlock(String key, String value) {
     String lockValue = (String) redisTemplate.opsForValue().get(key);
-    if (!StringUtils.isEmpty(lockValue) && value.equals(lockValue)) {
-      logger.debug("redis lock释放 key={} ", JacksonHelper.toJson(key));
+    if (StringHelper.isNotBlank(lockValue) && value.equals(lockValue)) {
+      log.debug("redis lock释放 key={} ", JsonHelper.toJson(key));
       redisTemplate.opsForValue().getOperations().delete(key);
     }
   }

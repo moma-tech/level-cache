@@ -1,7 +1,6 @@
 package top.moma.levelcache.cache;
 
 import lombok.extern.slf4j.Slf4j;
-import org.omg.CORBA.ObjectHelper;
 import org.springframework.cache.support.AbstractValueAdaptingCache;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.util.StringUtils;
@@ -9,6 +8,7 @@ import top.moma.levelcache.cache.caffeine.CaffeineCache;
 import top.moma.levelcache.cache.redis.RedisCache;
 import top.moma.levelcache.setting.MomaCacheMode;
 import top.moma.levelcache.setting.MomaCacheSetting;
+import top.moma.m64.core.helper.ObjectHelper;
 
 import java.util.Objects;
 import java.util.concurrent.Callable;
@@ -39,7 +39,7 @@ public class MomaCache extends AbstractValueAdaptingCache {
     super(allowNullValues);
     this.redisTemplate = redisTemplate;
     this.cacheMode = momaCacheSetting.getCacheMode();
-    
+
     switch (cacheMode) {
       case REDIS_CACHE_ONLY:
         this.caffeineCache = null;
@@ -103,7 +103,7 @@ public class MomaCache extends AbstractValueAdaptingCache {
         return this.caffeineCache.getNativeCache();
       default:
         Object result = this.caffeineCache.getNativeCache();
-        if (Objects.isNull(result)) {
+        if (ObjectHelper.isEmpty(result)) {
           result = this.redisCache.getNativeCache();
         }
         return result;
@@ -119,7 +119,7 @@ public class MomaCache extends AbstractValueAdaptingCache {
         return this.caffeineCache.get(key, valueLoader);
       default:
         T result = this.caffeineCache.get(key, valueLoader);
-        if (Objects.isNull(result)) {
+        if (ObjectHelper.isEmpty(result)) {
           result = this.redisCache.get(key, valueLoader);
           this.caffeineCache.putIfAbsent(key, valueLoader);
         }

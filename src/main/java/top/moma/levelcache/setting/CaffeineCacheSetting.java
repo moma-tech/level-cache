@@ -1,5 +1,7 @@
 package top.moma.levelcache.setting;
 
+import lombok.Data;
+
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -10,6 +12,7 @@ import java.util.concurrent.TimeUnit;
  * @author Created by ivan on 2020/6/29 .
  * @version 1.0
  */
+@Data
 public class CaffeineCacheSetting implements java.io.Serializable {
   private static final long serialVersionUID = 265643425858885778L;
 
@@ -38,52 +41,4 @@ public class CaffeineCacheSetting implements java.io.Serializable {
 
   /** 缓存过期模式 */
   private CaffeineExpiredMode caffeineExpiredMode = CaffeineExpiredMode.expireAfterWrite;
-
-  public int getInitialCapacity() {
-    return initialCapacity;
-  }
-
-  public void setInitialCapacity(int initialCapacity) {
-    this.initialCapacity = initialCapacity;
-  }
-
-  public long getMaximumSize() {
-    return maximumSize;
-  }
-
-  public void setMaximumSize(long maximumSize) {
-    this.maximumSize = maximumSize;
-  }
-
-  public long getMaximumWeight() {
-    return maximumWeight;
-  }
-
-  public void setMaximumWeight(long maximumWeight) {
-    this.maximumWeight = maximumWeight;
-  }
-
-  public long getExpireTime() {
-    return expireTime;
-  }
-
-  public void setExpireTime(long expireTime) {
-    this.expireTime = expireTime;
-  }
-
-  public TimeUnit getTimeUnit() {
-    return timeUnit;
-  }
-
-  public void setTimeUnit(TimeUnit timeUnit) {
-    this.timeUnit = timeUnit;
-  }
-
-  public CaffeineExpiredMode getCaffeineExpiredMode() {
-    return caffeineExpiredMode;
-  }
-
-  public void setCaffeineExpiredMode(CaffeineExpiredMode caffeineExpiredMode) {
-    this.caffeineExpiredMode = caffeineExpiredMode;
-  }
 }
