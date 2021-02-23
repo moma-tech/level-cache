@@ -1,6 +1,8 @@
 package top.moma.levelcache.setting;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import top.moma.levelcache.support.ExpiredMode;
 
 import java.util.concurrent.TimeUnit;
 
@@ -11,16 +13,9 @@ import java.util.concurrent.TimeUnit;
  * @version 1.0
  */
 @Data
+@AllArgsConstructor
 public class RedisCacheSetting implements java.io.Serializable {
   private static final long serialVersionUID = -3923012495086794506L;
-
-  public enum RedisExpireMode {
-    /** 最后一次写入或访问后经过固定时间过期 */
-    refreshAfterAccess,
-    /** 最后一次写入后经过固定时间过期 */
-    expireAfterWrite,
-    ;
-  }
 
   /** 缓存过期时间 */
   private long expireTime = 0;
@@ -37,7 +32,7 @@ public class RedisCacheSetting implements java.io.Serializable {
   /** 空值过期时间 */
   private long nullExpiration = 5000;
   /** 缓存过期模式 */
-  private RedisExpireMode redisExpireMode = RedisExpireMode.expireAfterWrite;
+  private ExpiredMode redisExpireMode = ExpiredMode.expireAfterWrite;
 
   public boolean isUsePrefix() {
     return usePrefix;

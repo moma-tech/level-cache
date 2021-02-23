@@ -10,6 +10,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
 import top.moma.levelcache.setting.RedisCacheSetting;
 import top.moma.levelcache.support.CacheConstants;
+import top.moma.levelcache.support.ExpiredMode;
 import top.moma.levelcache.support.LocalThreadPool;
 import top.moma.levelcache.support.ThreadTaskUtils;
 import top.moma.m64.core.constants.StringConstants;
@@ -58,7 +59,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
   /** 空值过期时间 */
   private long nullExpiration;
   /** 缓存过期模式 */
-  private RedisCacheSetting.RedisExpireMode redisExpireMode;
+  private ExpiredMode redisExpireMode;
 
   private LocalThreadPool localThreadPool = new LocalThreadPool();
 
@@ -91,7 +92,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
       boolean autoRenew,
       long renewThreshold,
       long nullExpiration,
-      RedisCacheSetting.RedisExpireMode redisExpireMode,
+      ExpiredMode redisExpireMode,
       RedisTemplate<String, Object> redisTemplate) {
     super(allowNullValues);
     this.redisName = redisName;
@@ -132,8 +133,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
     // KEY 存在, 未正确序列化可能存在空值
     if (ObjectHelper.isNotEmpty(result)) {
       // auto renew enabled or redis expired mode set to after access
-      if (autoRenew
-          || RedisCacheSetting.RedisExpireMode.refreshAfterAccess.equals(this.redisExpireMode)) {
+      if (autoRenew || ExpiredMode.refreshAfterAccess.equals(this.redisExpireMode)) {
         refreshCache(redisKey, valueLoader);
       }
       return TypeHelper.cast(fromStoreValue(result));

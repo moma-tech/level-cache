@@ -1,6 +1,8 @@
 package top.moma.levelcache.setting;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import top.moma.levelcache.support.ExpiredMode;
 
 import java.util.concurrent.TimeUnit;
 
@@ -13,16 +15,9 @@ import java.util.concurrent.TimeUnit;
  * @version 1.0
  */
 @Data
+@AllArgsConstructor
 public class CaffeineCacheSetting implements java.io.Serializable {
   private static final long serialVersionUID = 265643425858885778L;
-
-  public enum CaffeineExpiredMode {
-    /** 最后一次写入或访问后经过固定时间过期 */
-    expireAfterAccess,
-    /** 最后一次写入后经过固定时间过期 */
-    expireAfterWrite,
-    ;
-  }
 
   /** 初始空间大小 */
   private int initialCapacity = 20;
@@ -40,5 +35,5 @@ public class CaffeineCacheSetting implements java.io.Serializable {
   private TimeUnit timeUnit = TimeUnit.MILLISECONDS;
 
   /** 缓存过期模式 */
-  private CaffeineExpiredMode caffeineExpiredMode = CaffeineExpiredMode.expireAfterWrite;
+  private ExpiredMode caffeineExpiredMode = ExpiredMode.expireAfterWrite;
 }

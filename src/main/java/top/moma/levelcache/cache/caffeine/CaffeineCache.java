@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.support.AbstractValueAdaptingCache;
 import org.springframework.cache.support.NullValue;
 import top.moma.levelcache.setting.CaffeineCacheSetting;
+import top.moma.levelcache.support.ExpiredMode;
 import top.moma.m64.core.helper.TypeHelper;
 import top.moma.m64.core.helper.json.JsonHelper;
 
@@ -128,11 +129,10 @@ public class CaffeineCache extends AbstractValueAdaptingCache {
         .initialCapacity(caffeineCacheSetting.getInitialCapacity())
         .maximumSize(caffeineCacheSetting.getMaximumSize())
         .maximumWeight(caffeineCacheSetting.getMaximumWeight());
-    if (CaffeineCacheSetting.CaffeineExpiredMode.expireAfterWrite.equals(
-        caffeineCacheSetting.getCaffeineExpiredMode())) {
+    if (ExpiredMode.expireAfterWrite.equals(caffeineCacheSetting.getCaffeineExpiredMode())) {
       cacheBuilder.expireAfterWrite(
           caffeineCacheSetting.getExpireTime(), caffeineCacheSetting.getTimeUnit());
-    } else if (CaffeineCacheSetting.CaffeineExpiredMode.expireAfterAccess.equals(
+    } else if (ExpiredMode.expireAfterAccess.equals(
         caffeineCacheSetting.getCaffeineExpiredMode())) {
       cacheBuilder.expireAfterAccess(
           caffeineCacheSetting.getExpireTime(), caffeineCacheSetting.getTimeUnit());
